@@ -1,0 +1,171 @@
+/**
+ * Creates a menu entry in the Google Docs UI when the document is opened.
+ * This method is only used by the regular add-on, and is never called by
+ * the mobile add-on version.
+ *
+ * @param {object} e The event parameter for a simple onOpen trigger. To
+ *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
+ *     running in, inspect e.authMode.
+ */
+function onOpen(e) {
+  DocumentApp.getUi().createAddonMenu()
+      .addItem('Approve', 'signandshare')
+      .addItem('Deny', 'rejectandshare')
+      .addToUi();
+}
+
+/**
+ * Runs when the add-on is installed.
+ * This method is only used by the regular add-on, and is never called by
+ * the mobile add-on version.
+ *
+ * @param {object} e The event parameter for a simple onInstall trigger. To
+ *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
+ *     running in, inspect e.authMode. (In practice, onInstall triggers always
+ *     run in AuthMode.FULL, but onOpen triggers may be AuthMode.LIMITED or
+ *     AuthMode.NONE.)
+ */
+function onInstall(e) {
+  onOpen(e);
+
+}
+
+
+function signandshare() {
+ //Get the Signature Bank
+ var data = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/10jaDxjLseztl17uR37AT1aWz72-Icti7luEotEXiBZA/edit?usp=sharing");
+ var sheet = data.getSheetByName("Sheet1");
+ //Get the integer of the last row and last column
+  var lastRow = sheet.getLastRow();
+ var lastCol = sheet.getLastColumn();
+ //Get all of the values within the Range that contains data
+ var range = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+ //Get the email address of the user accessing the doc
+  var user = Session.getActiveUser().getEmail();
+  //Loop through Column A looking for a match
+  for(n=0;n<range.length;++n){ 
+    if (range[n][0]==user){break} ;// if a match in column A is found, break the loop
+      }
+  Logger.log(range[n][1]);
+  //Assign the image URL to a variable
+  var imageUrl = range[n][1];
+  var blob = UrlFetchApp.fetch(imageUrl).getBlob();
+  
+  //Get the Active Document and store and assign the file name and id to a variable
+  var doc = DocumentApp.getActiveDocument();
+ 
+  var docname = doc.getName();
+  var id = doc.getId();
+ //Start a new paragraph at the bottom of the doc
+  var paragraph = doc.getBody().appendParagraph('');
+ var position = doc.newPosition(paragraph, 0);
+ doc.setCursor(position);
+  //append the approved image
+  doc.getBody().appendImage(blob);
+  //assign a timestamp to a variable
+  var formattedDate = Utilities.formatDate(new Date(), "GMT", "yyyy-MM-dd'T'HH:mm:ss'Z'");
+ Logger.log(formattedDate);
+  var body = DocumentApp.getActiveDocument().getBody();
+
+ // Use editAsText to obtain a single text element containing
+ // all the characters in the document.
+  
+  var url = doc.getUrl();
+  var file = DriveApp.getFileById(id);
+  
+  var text = body.editAsText();
+
+
+
+ // Insert email address and timestamp of approver.
+ text.appendText(''+user+' '+formattedDate+'');
+  var data = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1zfVJslIDXSjTmhrsMfb5Uzu2jOVgwi88Vc6Ye2UK5Ew/edit#gid=0");
+ var sheet = data.getSheetByName("LeaveData");
+ var lastRow = sheet.getLastRow();
+ var lastCol = sheet.getLastColumn();
+ 
+  // Insert text at the end of the document.
+ text.appendText(''+user+' '+formattedDate+'');
+    var data = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/10jaDxjLseztl17uR37AT1aWz72-Icti7luEotEXiBZA/edit?usp=sharing");
+ var sheet = data.getSheetByName("LeaveData");
+ var lastRow = sheet.getLastRow();
+ var lastCol = sheet.getLastColumn();
+ var range = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  for(p=0;n<range.length;++p){
+    if (range[p][0]==id){break} ;// if a match in column A is found, break the loop
+      }
+  Logger.log(range[p][1]);
+  
+  //add the person who requested the field trip as a viewer of the doc
+  var requester = range[p][1];
+  
+  
+  doc.addViewers([''+requester+'']);
+  
+  //send via email the notification
+  MailApp.sendEmail({
+    to: ''+requester+'',
+    cc: "mark-p@kinderkids.ed.jp",
+    subject: "Time off Approval Notification",
+    htmlBody:  'This confirms that '+docname+' has been approved. <br>' + 
+                  url});
+}
+
+function rejectandshare() {
+  var data = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1zfVJslIDXSjTmhrsMfb5Uzu2jOVgwi88Vc6Ye2UK5Ew/edit#gid=0");
+ var sheet = data.getSheetByName("Sheet1");
+ var lastRow = sheet.getLastRow();
+ var lastCol = sheet.getLastColumn();
+ var range = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+ var user = Session.getActiveUser().getEmail();
+  for(n=0;n<range.length;++n){
+    if (range[n][0]==user){break} ;// if a match in column A is found, break the loop
+      }
+  Logger.log(range[n][2]);
+  var imageUrl = range[n][2];
+  var blob = UrlFetchApp.fetch(imageUrl).getBlob();
+  var doc = DocumentApp.getActiveDocument();
+ 
+  var docname = doc.getName();
+ var paragraph = doc.getBody().appendParagraph('');
+ var position = doc.newPosition(paragraph, 0);
+ doc.setCursor(position);
+  doc.getBody().appendImage(blob);
+  var formattedDate = Utilities.formatDate(new Date(), "GMT", "yyyy-MM-dd'T'HH:mm:ss'Z'");
+ Logger.log(formattedDate);
+  var body = DocumentApp.getActiveDocument().getBody();
+
+ // Use editAsText to obtain a single text element containing
+ // all the characters in the document.
+  var id = doc.getId();
+  var url = doc.getUrl();
+  var file = DriveApp.getFileById(id);
+  
+  var text = body.editAsText();
+
+
+
+ // Insert text at the end of the document.
+ text.appendText(''+user+' '+formattedDate+'');
+    var data = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/10jaDxjLseztl17uR37AT1aWz72-Icti7luEotEXiBZA/edit?usp=sharing");
+ var sheet = data.getSheetByName("LeaveData");
+ var lastRow = sheet.getLastRow();
+ var lastCol = sheet.getLastColumn();
+ var range = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  for(p=0;n<range.length;++p){
+    if (range[p][0]==id){break} ;// if a match in column A is found, break the loop
+      }
+  Logger.log(range[p][1]);
+  
+  //add the person who requested the field trip as a viewer of the doc
+  var requester = range[p][1];
+  
+  
+  doc.addViewers([''+requester+'']);
+  MailApp.sendEmail({
+    to: ''+requester+'',
+    cc: "mark-p@kinderkids.ed.jp",
+    subject: "Time off request not approved, please submit another date",
+    htmlBody:  'This confirms that '+docname+' has been denied. <br>' + 
+                  url}); 
+}
